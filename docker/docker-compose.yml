@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # CPU-only deployment (works on macOS and Ubuntu)
+  pii-detection-cpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - USE_GPU=false
+      - PII_ENTITIES=["EMAIL_ADDRESS", "PHONE_NUMBER", "PERSON", "DATE_TIME"]
+    restart: unless-stopped
+    container_name: pii-detection-cpu
+
+  # GPU-enabled deployment (Ubuntu with NVIDIA GPU)
+  pii-detection-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gpu
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - USE_GPU=true
+      - PII_ENTITIES=["EMAIL_ADDRESS", "PHONE_NUMBER", "PERSON", "DATE_TIME"]
+    restart: unless-stopped
+    container_name: pii-detection-gpu
+    # Enable GPU support - requires Docker with NVIDIA Container Toolkit
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
