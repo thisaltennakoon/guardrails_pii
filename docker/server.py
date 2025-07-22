@@ -83,7 +83,7 @@ def get_entities_from_env() -> List[str]:
 
 def get_gpu_setting_from_env() -> bool:
     """Get GPU usage setting from environment variable or use default."""
-    use_gpu_env = os.getenv("USE_GPU", "true").lower()
+    use_gpu_env = os.getenv("USE_GPU", "false").lower()
     return use_gpu_env in ["true", "1", "yes", "on"]
 
 
