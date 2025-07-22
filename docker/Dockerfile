@@ -28,8 +28,13 @@ COPY validator/ ./validator/
 COPY docker/server.py ./server.py
 
 # Pre-download and cache model files during build to avoid runtime delays
-# This runs a simple cache to download models, actual configuration will be from env vars at runtime
-RUN python -c "from validator import GuardrailsPII; from guardrails import Guard; print('Caching PII detection models...'); guard = Guard().use(GuardrailsPII(entities=['EMAIL_ADDRESS'], use_gpu=False)); print('Models cached successfully!')"
+# Cache models for the default entities that will be used at runtime
+RUN python -c "import json; import os; from validator import GuardrailsPII; from guardrails import Guard; \
+entities = json.loads(os.getenv('PII_ENTITIES', '[\"EMAIL_ADDRESS\", \"PHONE_NUMBER\", \"PERSON\", \"DATE_TIME\"]')); \
+use_gpu = os.getenv('USE_GPU', 'false').lower() in ['true', '1', 'yes', 'on']; \
+print(f'Caching PII detection models for entities: {entities}, GPU: {use_gpu}...'); \
+guard = Guard().use(GuardrailsPII(entities=entities, use_gpu=use_gpu)); \
+print('Models cached successfully!')"
 
 # Expose port 8000
 EXPOSE 8000
