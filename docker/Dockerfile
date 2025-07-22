@@ -18,14 +18,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY docker/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY validator/ ./validator/
-COPY server.py ./server.py
+COPY docker/server.py ./server.py
 
 # Pre-download and cache model files during build to avoid runtime delays
 # This runs a simple cache to download models, actual configuration will be from env vars at runtime
