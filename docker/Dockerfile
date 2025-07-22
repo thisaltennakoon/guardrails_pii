@@ -29,6 +29,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY docker/server.py .
 COPY validator ./validator
 
+# Create a non-root user with UID 10001 to satisfy Checkov CKV_CHOREO_1
+RUN groupadd -g 10001 appgroup && useradd -m -u 10001 -g appgroup -s /bin/bash appuser
+
+# Explicitly switch to UID 10001 instead of using "appuser"
+USER 10001
+
 # Cache the model to avoid startup delays
 RUN python -c "from gliner import GLiNER; model = GLiNER.from_pretrained('urchade/gliner_small-v2.1');"
 
