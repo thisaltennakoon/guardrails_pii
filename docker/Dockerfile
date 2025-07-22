@@ -34,5 +34,11 @@ RUN python -c "from validator import GuardrailsPII; from guardrails import Guard
 # Expose port 8000
 EXPOSE 8000
 
+# Create a non-root user with UID 10001 to satisfy Checkov CKV_CHOREO_1
+RUN groupadd -g 10001 appgroup && useradd -m -u 10001 -g appgroup -s /bin/bash appuser
+
+# Explicitly switch to UID 10001 instead of using "appuser"
+USER 10001
+
 # Start the Flask application
 CMD ["python", "server.py"]
