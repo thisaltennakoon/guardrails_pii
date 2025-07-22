@@ -39,4 +39,4 @@ EXPOSE 8000
 ENV PORT=8000
 ENV WORKERS=1
 
-CMD ["sh", "-c", "gunicorn -w ${WORKERS} -k uvicorn.workers.UvicornWorker server:app -b 0.0.0.0:${PORT}"]
+CMD gunicorn -w ${WORKERS} -k uvicorn.workers.UvicornWorker server:app -b 0.0.0.0:${PORT}
