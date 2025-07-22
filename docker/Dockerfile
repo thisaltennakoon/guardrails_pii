@@ -38,6 +38,11 @@ COPY validator ./validator
 # Cache the model to avoid startup delays
 RUN python -c "from gliner import GLiNER; model = GLiNER.from_pretrained('urchade/gliner_small-v2.1');"
 
+# Create cache directories for the appuser and set proper permissions
+RUN mkdir -p /home/appuser/.cache/python-tldextract && \
+    chown -R appuser:appuser /home/appuser/.cache && \
+    chmod -R 755 /home/appuser/.cache
+
 # Change ownership of the app directory to the non-root user
 RUN chown -R appuser:appuser /app
 
@@ -51,6 +56,7 @@ EXPOSE 8000
 ENV PORT=8000
 ENV WORKERS=1
 
-# Use environment variables in the command
-# Note: Shell form of CMD is often needed to properly expand variables
-CMD gunicorn -w ${WORKERS} -k uvicorn.workers.UvicornWorker server:app -b 0.0.0.0:${PORT}
+# Set cache directory for tldextract to prevent permission issues
+ENV TLDEXTRACT_CACHE_DIR=/home/appuser/.cache/python-tldextract
+
+CMD ["sh", "-c", "gunicorn -w ${WORKERS} -k uvicorn.workers.UvicornWorker server:app -b 0.0.0.0:${PORT}"]

@@ -28,6 +28,7 @@ import uvicorn
 
 app = FastAPI(title="PII Detection API", version="1.0.0")
 
+
 # Read configuration from environment variables
 def get_entities_from_env() -> List[str]:
     """Get PII entities from environment variable or use defaults."""
@@ -38,14 +39,53 @@ def get_entities_from_env() -> List[str]:
         except json.JSONDecodeError:
             print(f"Warning: Invalid JSON in PII_ENTITIES environment variable: {env_entities}")
             print("Using default entities instead.")
-    
+
     # Default entities if environment variable is not set or invalid
-    return ["EMAIL_ADDRESS", "PHONE_NUMBER", "PERSON", "DATE_TIME"]
+    return ["CREDIT_CARD",
+            "CRYPTO",
+            "DATE_TIME",
+            "EMAIL_ADDRESS",
+            "IBAN_CODE",
+            "IP_ADDRESS",
+            "NRP",
+            "LOCATION",
+            "PERSON",
+            "PHONE_NUMBER",
+            "MEDICAL_LICENSE",
+            "URL",
+            "US_BANK_NUMBER",
+            "US_DRIVER_LICENSE",
+            "US_ITIN",
+            "US_PASSPORT",
+            "US_SSN",
+            "UK_NHS",
+            "ES_NIF",
+            "ES_NIE",
+            "IT_FISCAL_CODE",
+            "IT_DRIVER_LICENSE",
+            "IT_VAT_CODE",
+            "IT_PASSPORT",
+            "IT_IDENTITY_CARD",
+            "PL_PESEL",
+            "SG_NRIC_FIN",
+            "SG_UEN",
+            "AU_ABN",
+            "AU_ACN",
+            "AU_TFN",
+            "AU_MEDICARE",
+            "IN_PAN",
+            "IN_AADHAAR",
+            "IN_VEHICLE_REGISTRATION",
+            "IN_VOTER",
+            "IN_PASSPORT",
+            "FI_PERSONAL_IDENTITY_CODE"]
+
 
 def get_gpu_setting_from_env() -> bool:
     """Get GPU usage setting from environment variable or use default."""
     use_gpu_env = os.getenv("USE_GPU", "true").lower()
     return use_gpu_env in ["true", "1", "yes", "on"]
+
 
 # Get configuration from environment
 entities = get_entities_from_env()
@@ -59,25 +99,30 @@ guard = Guard().use(
     GuardrailsPII(entities=entities, on_fail="fix", use_gpu=use_gpu)
 )
 
+
 class TextRequest(BaseModel):
     text: str = Field(..., description="Text to validate for PII")
+
 
 class PIIEntity(BaseModel):
     piiEntity: str
     piiValue: str
+
 
 class ValidationResponse(BaseModel):
     verdict: bool
     assessment: List[PIIEntity]
     anonymizedText: Optional[str] = None
 
+
 class ValidationResult:
     """Class to store and format validation results."""
+
     def __init__(self, passed: bool, summaries: List[Dict[str, Any]], fixed_text: Optional[str] = None):
         self.passed = passed
         self.summaries = summaries
         self.fixed_text = fixed_text
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "verdict": self.passed,
@@ -85,13 +130,14 @@ class ValidationResult:
             "anonymized": self.fixed_text
         }
 
+
 def validate_text(text: str) -> ValidationResult:
     """Validate a single text string for PII and anonymize it."""
     if not text or not isinstance(text, str):
         return ValidationResult(True, [])
-    
+
     result = guard.validate(text)
-    
+
     pii_entities = []
     if hasattr(result, 'validation_summaries') and result.validation_summaries:
         for summary in result.validation_summaries:
@@ -101,9 +147,10 @@ def validate_text(text: str) -> ValidationResult:
                     "piiEntity": error.reason,
                     "piiValue": pii_value
                 })
-    
+
     masked_text = result.validated_output if result.validation_passed else result.fixed_output
     return ValidationResult(result.validation_passed, pii_entities, masked_text)
+
 
 @app.post("/validate", response_model=ValidationResponse)
 async def validate(request: TextRequest):
@@ -111,9 +158,9 @@ async def validate(request: TextRequest):
     try:
         if not request.text:
             raise HTTPException(status_code=400, detail="Missing or empty 'text' field in request")
-        
+
         result = validate_text(request.text)
-        
+
         return ValidationResponse(
             verdict=result.passed,
             assessment=result.summaries,
@@ -121,6 +168,7 @@ async def validate(request: TextRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)
