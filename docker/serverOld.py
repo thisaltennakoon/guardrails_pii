@@ -25,8 +25,6 @@ from validator import GuardrailsPII
 from guardrails import Guard
 from typing import List, Dict, Any, Optional
 import uvicorn
-import uuid
-import re
 
 app = FastAPI(title="PII Detection API", version="1.0.0")
 
@@ -104,8 +102,6 @@ guard = Guard().use(
 
 class TextRequest(BaseModel):
     text: str = Field(..., description="Text to validate for PII")
-    piiEntities: List[str] = Field(..., description="List of PII entity types to detect and filter")
-    redact: bool = Field(default=False, description="Whether to redact PII with asterisks instead of UUID replacements")
 
 
 class PIIEntity(BaseModel):
@@ -135,39 +131,24 @@ class ValidationResult:
         }
 
 
-def validate_text(text: str, redact: bool, pii_entities_input: List[str] = []) -> ValidationResult:
+def validate_text(text: str) -> ValidationResult:
     """Validate a single text string for PII and anonymize it."""
     if not text or not isinstance(text, str):
-        return ValidationResult(True, [], text)
+        return ValidationResult(True, [])
 
     result = guard.validate(text)
 
     pii_entities = []
-    replacement_map = {}
-
     if hasattr(result, 'validation_summaries') and result.validation_summaries:
         for summary in result.validation_summaries:
             for error in summary.error_spans:
                 pii_value = text[error.start:error.end]
-                pii_type = error.reason
+                pii_entities.append({
+                    "piiEntity": error.reason,
+                    "piiValue": pii_value
+                })
 
-                if (pii_type not in pii_entities_input): continue
-
-                if pii_value not in replacement_map:
-                    short_uuid = str(uuid.uuid4())[:4]
-                    # replacement = f"[{pii_type}_{short_uuid}]"
-                    replacement = f"{pii_type}_{short_uuid}"
-                    replacement_map[pii_value] = replacement
-
-    # Replace all occurrences of each unique pii_value with its replacement
-    masked_text = text
-    for pii_val, replacement in replacement_map.items():
-        masked_text = re.sub(re.escape(pii_val), '*****' if redact else replacement, masked_text)
-        pii_entities.append({
-            "piiEntity": replacement,
-            "piiValue": pii_val
-        })
-
+    masked_text = result.validated_output if result.validation_passed else result.fixed_output
     return ValidationResult(result.validation_passed, pii_entities, masked_text)
 
 
@@ -178,11 +159,7 @@ async def validate(request: TextRequest):
         if not request.text:
             raise HTTPException(status_code=400, detail="Missing or empty 'text' field in request")
 
-        # Require piiEntities to be present and non-empty
-        if not request.piiEntities or not isinstance(request.piiEntities, list):
-            raise HTTPException(status_code=400, detail="Missing or empty 'piiEntities' field in request")
-
-        result = validate_text(request.text, request.redact, request.piiEntities)
+        result = validate_text(request.text)
 
         return ValidationResponse(
             verdict=result.passed,

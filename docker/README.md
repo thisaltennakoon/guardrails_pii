@@ -72,6 +72,12 @@ Validates text for PII and returns anonymized version.
 **Request Body:**
 ```json
 {
-  "text": "My name is John Doe and my email is john.doe@example.com"
+  "text": "My name is John Doe and my email is john.doe@example.com",
+      "piiEntities": [
+        "CREDIT_CARD",
+        "CRYPTO",
+        "DATE_TIME",
+        "EMAIL_ADDRESS",
+        "IBAN_CODE"]
 }
 ```
