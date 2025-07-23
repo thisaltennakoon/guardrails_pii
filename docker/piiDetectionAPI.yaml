@@ -1,0 +1,173 @@
+openapi: 3.0.3
+info:
+  title: PII Detection and Anonymization API
+  description: API for detecting and anonymizing personally identifiable information (PII) in text
+  version: 1.0.0
+  contact:
+    name: API Support
+paths:
+  /validate:
+    post:
+      summary: Detect and anonymize PII in text
+      description: Analyzes text for personally identifiable information and returns anonymized version
+      operationId: detectPII
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PIIDetectionRequest'
+            example:
+              text: "Hello Julie Wilcox, thank you for your inquiry. \n\nThe vehicle with license plate YV05DBZ is parked in zone A."
+              piiEntities:
+                - "CREDIT_CARD"
+                - "PERSON"
+                - "EMAIL_ADDRESS"
+                - "PHONE_NUMBER"
+                - "LOCATION"
+                - "US_SSN"
+                - "UK_NHS"
+      responses:
+        '200':
+          description: Successful PII detection and anonymization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PIIDetectionResponse'
+              example:
+                verdict: true
+                assessment:
+                  - piiEntity: "PERSON_7509"
+                    piiValue: "Julie Wilcox"
+                  - piiEntity: "LOCATION_72e1"
+                    piiValue: "zone A"
+                anonymizedText: "Hello PERSON_7509, thank you for your inquiry. \n\nThe vehicle with license plate YV05DBZ is parked in LOCATION_72e1."
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: api-key
+      description: API key for authentication
+
+  schemas:
+    PIIDetectionRequest:
+      type: object
+      required:
+        - text
+        - piiEntities
+      properties:
+        text:
+          type: string
+          description: The text to analyze for PII
+          example: "Hello Julie Wilcox, thank you for your inquiry."
+        piiEntities:
+          type: array
+          description: List of PII entity types to detect
+          items:
+            type: string
+            enum:
+              - "CREDIT_CARD"
+              - "CRYPTO"
+              - "DATE_TIME"
+              - "EMAIL_ADDRESS"
+              - "IBAN_CODE"
+              - "IP_ADDRESS"
+              - "NRP"
+              - "LOCATION"
+              - "PERSON"
+              - "PHONE_NUMBER"
+              - "MEDICAL_LICENSE"
+              - "URL"
+              - "US_BANK_NUMBER"
+              - "US_DRIVER_LICENSE"
+              - "US_ITIN"
+              - "US_PASSPORT"
+              - "US_SSN"
+              - "UK_NHS"
+              - "ES_NIF"
+              - "ES_NIE"
+              - "IT_FISCAL_CODE"
+              - "IT_DRIVER_LICENSE"
+              - "IT_VAT_CODE"
+              - "IT_PASSPORT"
+              - "IT_IDENTITY_CARD"
+              - "PL_PESEL"
+              - "SG_NRIC_FIN"
+              - "SG_UEN"
+              - "AU_ABN"
+              - "AU_ACN"
+              - "AU_TFN"
+              - "AU_MEDICARE"
+              - "IN_PAN"
+              - "IN_AADHAAR"
+              - "IN_VEHICLE_REGISTRATION"
+              - "IN_VOTER"
+              - "IN_PASSPORT"
+              - "FI_PERSONAL_IDENTITY_CODE"
+          example:
+            - "PERSON"
+            - "EMAIL_ADDRESS"
+            - "LOCATION"
+
+    PIIDetectionResponse:
+      type: object
+      properties:
+        verdict:
+          type: boolean
+          description: Whether PII was detected in the text
+          example: true
+        assessment:
+          type: array
+          description: Details of detected PII entities
+          items:
+            $ref: '#/components/schemas/PIIEntity'
+        anonymizedText:
+          type: string
+          description: The original text with PII replaced by anonymized tokens
+          example: "Hello PERSON_7509, thank you for your inquiry."
+
+    PIIEntity:
+      type: object
+      properties:
+        piiEntity:
+          type: string
+          description: The anonymized entity identifier
+          example: "PERSON_7509"
+        piiValue:
+          type: string
+          description: The original PII value that was detected
+          example: "Julie Wilcox"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid request format"
+        code:
+          type: string
+          description: Error code
+          example: "INVALID_REQUEST"
